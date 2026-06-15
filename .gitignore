@@ -40,3 +40,6 @@ desktop.ini
 *.log
 *.tmp
 tempCodeRunnerFile.py
+
+# Personal scenes
+corazon.py

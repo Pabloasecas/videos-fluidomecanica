@@ -298,3 +298,92 @@ class producto_vectorial(Scene):
             run_time=2,
         )
         self.wait(2)
+
+class campo_escalar(Scene):
+    def construct(self):
+        title = Tex("Campo escalar de presiones", font_size=44, color=naranja)
+        title.to_edge(UP)
+
+        axes = Axes(
+            x_range=[-3, 3, 1],
+            y_range=[-2, 2, 1],
+            x_length=8,
+            y_length=4.8,
+            axis_config={"color": WHITE, "include_numbers": False},
+            tips=True,
+        ).shift(LEFT * 0.5 + DOWN * 0.15)
+
+        x_min, x_max = -3, 3
+        y_min, y_max = -2, 2
+        nx, ny = 42, 28
+        dx = (x_max - x_min) / nx
+        dy = (y_max - y_min) / ny
+
+        def pressure(x, y):
+            high_pressure = 1.4 * np.exp(-((x + 1.2) ** 2 + (y - 0.6) ** 2) / 0.55)
+            low_pressure = 0.9 * np.exp(-((x - 1.1) ** 2 + (y + 0.55) ** 2) / 0.75)
+            gradient = 0.18 * x - 0.08 * y
+            return high_pressure - low_pressure + gradient
+
+        sample_points = [
+            (
+                x_min + (i + 0.5) * dx,
+                y_min + (j + 0.5) * dy,
+            )
+            for i in range(nx)
+            for j in range(ny)
+        ]
+        pressure_values = [pressure(x, y) for x, y in sample_points]
+        min_pressure = min(pressure_values)
+        max_pressure = max(pressure_values)
+
+        def pressure_color(value):
+            alpha = inverse_interpolate(min_pressure, max_pressure, value)
+            return color_gradient(
+                [BLUE_E, azul, verde, YELLOW, naranja, RED_E],
+                100,
+            )[int(np.clip(alpha, 0, 0.999) * 100)]
+
+        cells = VGroup()
+        for x, y in sample_points:
+            cell = Rectangle(
+                width=axes.x_axis.unit_size * dx,
+                height=axes.y_axis.unit_size * dy,
+                stroke_width=0,
+                fill_color=pressure_color(pressure(x, y)),
+                fill_opacity=0.92,
+            )
+            cell.move_to(axes.c2p(x, y))
+            cells.add(cell)
+
+        field_label = MathTex(
+            r"p(x,y)",
+            r"\;[\mathrm{Pa}]",
+            color=naranja,
+            font_size=44,
+        ).next_to(axes, DOWN, buff=0.35)
+
+        legend = VGroup()
+        legend_steps = 28
+        for i in range(legend_steps):
+            value = min_pressure + (max_pressure - min_pressure) * i / (legend_steps - 1)
+            bar_cell = Rectangle(
+                width=0.28,
+                height=4.8 / legend_steps,
+                stroke_width=0,
+                fill_color=pressure_color(value),
+                fill_opacity=1,
+            )
+            legend.add(bar_cell)
+        legend.arrange(UP, buff=0).next_to(axes, RIGHT, buff=0.6)
+
+        legend_title = MathTex("p", color=naranja, font_size=34).next_to(legend, UP, buff=0.15)
+        high_label = Tex("alta", color=naranja, font_size=26).next_to(legend, RIGHT, buff=0.18).align_to(legend, UP)
+        low_label = Tex("baja", color=naranja, font_size=26).next_to(legend, RIGHT, buff=0.18).align_to(legend, DOWN)
+        legend_group = VGroup(legend, legend_title, high_label, low_label)
+
+        self.play(Write(title))
+        self.play(FadeIn(cells), Write(axes), run_time=2)
+        self.play(Write(field_label))
+        self.play(FadeIn(legend_group, shift=LEFT * 0.2))
+        self.wait(2)

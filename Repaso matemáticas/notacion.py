@@ -311,7 +311,7 @@ class campo_escalar(Scene):
             y_length=4.8,
             axis_config={"color": WHITE, "include_numbers": False},
             tips=True,
-        ).shift(LEFT * 0.5 + DOWN * 0.15)
+        ).shift(LEFT * 0.5 + DOWN * 0.45)
 
         x_min, x_max = -3, 3
         y_min, y_max = -2, 2
@@ -319,11 +319,22 @@ class campo_escalar(Scene):
         dx = (x_max - x_min) / nx
         dy = (y_max - y_min) / ny
 
-        def pressure(x, y):
-            high_pressure = 1.4 * np.exp(-((x + 1.2) ** 2 + (y - 0.6) ** 2) / 0.55)
-            low_pressure = 0.9 * np.exp(-((x - 1.1) ** 2 + (y + 0.55) ** 2) / 0.75)
+        time_tracker = ValueTracker(0)
+
+        def pressure(x, y, t):
+            high_center_x = -1.2 + 0.75 * np.sin(1.1 * t)
+            high_center_y = 0.6 + 0.35 * np.cos(0.9 * t)
+            low_center_x = 1.1 + 0.65 * np.cos(0.8 * t)
+            low_center_y = -0.55 + 0.45 * np.sin(1.2 * t)
+            high_pressure = 1.4 * np.exp(
+                -((x - high_center_x) ** 2 + (y - high_center_y) ** 2) / 0.55
+            )
+            low_pressure = 0.9 * np.exp(
+                -((x - low_center_x) ** 2 + (y - low_center_y) ** 2) / 0.75
+            )
+            oscillation = 0.25 * np.sin(2.2 * t + 1.4 * x - 0.9 * y)
             gradient = 0.18 * x - 0.08 * y
-            return high_pressure - low_pressure + gradient
+            return high_pressure - low_pressure + oscillation + gradient
 
         sample_points = [
             (
@@ -333,16 +344,27 @@ class campo_escalar(Scene):
             for i in range(nx)
             for j in range(ny)
         ]
-        pressure_values = [pressure(x, y) for x, y in sample_points]
+        pressure_values = [
+            pressure(x, y, t)
+            for x, y in sample_points
+            for t in np.linspace(0, 5, 26)
+        ]
         min_pressure = min(pressure_values)
         max_pressure = max(pressure_values)
+        pressure_palette = color_gradient(
+            [BLUE_E, azul, verde, YELLOW, naranja, RED_E],
+            100,
+        )
 
         def pressure_color(value):
             alpha = inverse_interpolate(min_pressure, max_pressure, value)
-            return color_gradient(
-                [BLUE_E, azul, verde, YELLOW, naranja, RED_E],
-                100,
-            )[int(np.clip(alpha, 0, 0.999) * 100)]
+            return pressure_palette[int(np.clip(alpha, 0, 0.999) * 100)]
+
+        def update_cell_color(cell, x, y):
+            return cell.set_fill(
+                pressure_color(pressure(x, y, time_tracker.get_value())),
+                opacity=0.92,
+            )
 
         cells = VGroup()
         for x, y in sample_points:
@@ -350,10 +372,11 @@ class campo_escalar(Scene):
                 width=axes.x_axis.unit_size * dx,
                 height=axes.y_axis.unit_size * dy,
                 stroke_width=0,
-                fill_color=pressure_color(pressure(x, y)),
+                fill_color=pressure_color(pressure(x, y, 0)),
                 fill_opacity=0.92,
             )
             cell.move_to(axes.c2p(x, y))
+            cell.add_updater(lambda mob, x=x, y=y: update_cell_color(mob, x, y))
             cells.add(cell)
 
         field_label = MathTex(
@@ -382,8 +405,43 @@ class campo_escalar(Scene):
         low_label = Tex("baja", color=naranja, font_size=26).next_to(legend, RIGHT, buff=0.18).align_to(legend, DOWN)
         legend_group = VGroup(legend, legend_title, high_label, low_label)
 
+        time_label = MathTex("t=", color=naranja, font_size=36)
+        time_value = DecimalNumber(
+            time_tracker.get_value(),
+            num_decimal_places=1,
+            color=naranja,
+            font_size=36,
+        )
+        time_value.add_updater(lambda number: number.set_value(time_tracker.get_value()))
+        time_unit = MathTex(r"\mathrm{s}", color=naranja, font_size=36)
+        time_marker = VGroup(time_label, time_value, time_unit)
+        time_marker.arrange(RIGHT, buff=0.12)
+
+        unsteady_derivative = MathTex(
+            r"\frac{\partial p}{\partial t}",
+            r"\neq",
+            "0",
+            color=naranja,
+            font_size=34,
+        )
+        steady_derivative = MathTex(
+            r"\frac{\partial p}{\partial t}",
+            "=",
+            "0",
+            color=naranja,
+            font_size=34,
+        )
+        top_markers = VGroup(time_marker, unsteady_derivative)
+        top_markers.arrange(RIGHT, buff=0.65).next_to(title, DOWN, buff=0.12)
+        steady_derivative.move_to(unsteady_derivative)
+
         self.play(Write(title))
         self.play(FadeIn(cells), Write(axes), run_time=2)
         self.play(Write(field_label))
-        self.play(FadeIn(legend_group, shift=LEFT * 0.2))
+        self.play(FadeIn(legend_group, shift=LEFT * 0.2), Write(time_marker))
+        self.play(Write(unsteady_derivative))
+        self.play(time_tracker.animate.set_value(5), run_time=5, rate_func=linear)
+        cells.clear_updaters()
+        time_value.clear_updaters()
+        self.play(TransformMatchingTex(unsteady_derivative, steady_derivative))
         self.wait(2)

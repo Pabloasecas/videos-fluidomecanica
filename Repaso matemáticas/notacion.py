@@ -431,6 +431,15 @@ class campo_escalar(Scene):
             color=naranja,
             font_size=34,
         )
+        uniform_derivative = MathTex(
+            r"\frac{\partial p}{\partial x_i}",
+            "=",
+            "0",
+            r"\quad \forall x_i",
+            color=naranja,
+            font_size=34,
+        ).next_to(title, DOWN, buff=0.12)
+        uniform_pressure_color = pressure_color((min_pressure + max_pressure) / 2)
         top_markers = VGroup(time_marker, unsteady_derivative)
         top_markers.arrange(RIGHT, buff=0.65).next_to(title, DOWN, buff=0.12)
         steady_derivative.move_to(unsteady_derivative)
@@ -445,3 +454,104 @@ class campo_escalar(Scene):
         time_value.clear_updaters()
         self.play(TransformMatchingTex(unsteady_derivative, steady_derivative))
         self.wait(2)
+        self.play(
+            FadeOut(time_marker),
+            TransformMatchingTex(steady_derivative, uniform_derivative),
+            cells.animate.set_fill(uniform_pressure_color, opacity=0.92),
+            run_time=2,
+        )
+        self.wait(2)
+
+class campo_vectorial(Scene):
+    def construct(self):
+        title = Tex("Campo vectorial", font_size=44, color=naranja)
+        title.to_edge(UP)
+
+        axes = Axes(
+            x_range=[-3, 3, 1],
+            y_range=[-2, 2, 1],
+            x_length=8,
+            y_length=4.8,
+            axis_config={"color": WHITE, "include_numbers": True},
+            tips=True,
+        ).shift(LEFT * 0.5 + DOWN * 0.15)
+        axes_labels = axes.get_axis_labels(
+            MathTex("x", color=WHITE),
+            MathTex("y", color=WHITE),
+        )
+
+        x_values = np.linspace(-2.6, 2.6, 11)
+        y_values = np.linspace(-1.6, 1.6, 7)
+        arrow_length = 0.42
+
+        def vector_field(x, y):
+            return np.array(
+                [
+                    -0.85 * y + 0.35 * np.sin(1.4 * x),
+                    0.85 * x + 0.35 * np.cos(1.4 * y),
+                ]
+            )
+
+        sample_points = [(x, y) for x in x_values for y in y_values]
+        vector_modules = [
+            np.linalg.norm(vector_field(x, y))
+            for x, y in sample_points
+        ]
+        min_module = min(vector_modules)
+        max_module = max(vector_modules)
+        module_palette = color_gradient(
+            [BLUE_E, azul, verde, YELLOW, naranja, RED_E],
+            100,
+        )
+
+        def module_color(value):
+            alpha = inverse_interpolate(min_module, max_module, value)
+            return module_palette[int(np.clip(alpha, 0, 0.999) * 100)]
+
+        arrows = VGroup()
+        for x, y in sample_points:
+            vector = vector_field(x, y)
+            module = np.linalg.norm(vector)
+            direction = vector / module
+            start = np.array([x, y]) - direction * arrow_length / 2
+            end = np.array([x, y]) + direction * arrow_length / 2
+            arrow = Arrow(
+                axes.c2p(*start),
+                axes.c2p(*end),
+                buff=0,
+                color=module_color(module),
+                stroke_width=4,
+                max_tip_length_to_length_ratio=0.28,
+            )
+            arrows.add(arrow)
+
+        field_label = MathTex(
+            r"\mathbf{v}(x,y)",
+            color=naranja,
+            font_size=44,
+        ).next_to(axes, DOWN, buff=0.35)
+
+        legend = VGroup()
+        legend_steps = 28
+        for i in range(legend_steps):
+            value = min_module + (max_module - min_module) * i / (legend_steps - 1)
+            bar_cell = Rectangle(
+                width=0.28,
+                height=4.8 / legend_steps,
+                stroke_width=0,
+                fill_color=module_color(value),
+                fill_opacity=1,
+            )
+            legend.add(bar_cell)
+        legend.arrange(UP, buff=0).next_to(axes, RIGHT, buff=0.6)
+
+        legend_title = MathTex(r"\lVert\mathbf{v}\rVert", color=naranja, font_size=30).next_to(legend, UP, buff=0.15)
+        high_label = Tex("mayor", color=naranja, font_size=26).next_to(legend, RIGHT, buff=0.18).align_to(legend, UP)
+        low_label = Tex("menor", color=naranja, font_size=26).next_to(legend, RIGHT, buff=0.18).align_to(legend, DOWN)
+        legend_group = VGroup(legend, legend_title, high_label, low_label)
+
+        self.play(Write(title))
+        self.play(Write(axes), Write(axes_labels))
+        self.play(LaggedStart(*[GrowArrow(arrow) for arrow in arrows], lag_ratio=0.025), run_time=3)
+        self.play(Write(field_label), FadeIn(legend_group, shift=LEFT * 0.2))
+        self.wait(5)

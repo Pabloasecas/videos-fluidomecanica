@@ -5,7 +5,7 @@ verde="#27F5B0"
 
 class latex(Scene):
     def construct(self):
-        latex = Tex(r"\LaTeX", font_size=144)
+        latex = Tex(r"\LaTeX", font_size=144, color=naranja)
         self.play(Write(latex))
         self.wait(2)
 

@@ -41,6 +41,7 @@ class gradiente(ThreeDScene):
         radio_corte = np.sqrt(3 / 2)
         radio_nivel = np.sqrt((3 - 2 * x_punto**2) / 2)
         radio_nivel_xz = np.sqrt((3 - 2 * y_punto**2) / 2)
+        radio_curva_nivel = np.sqrt((3 - z_punto) / 2)
 
         axes = ThreeDAxes(
             x_range=[-1.5, 1.5, 0.5],
@@ -68,7 +69,7 @@ class gradiente(ThreeDScene):
             resolution=(12, 32),
             fill_color=azul,
             fill_opacity=0.75,
-            checkerboard_colors=[azul, verde],
+            checkerboard_colors=[azul, azul],
             stroke_color=WHITE,
             stroke_width=0.35,
         )
@@ -134,7 +135,13 @@ class gradiente(ThreeDScene):
             stroke_width=5,
         )
         tangente_yz.set_fill(opacity=0)
-        grafica_yz = VGroup(axes_yz, axes_yz_labels, parabola_yz, punto_yz, tangente_yz)
+        etiqueta_yz = MathTex(
+            r"\frac{\partial z}{\partial y}",
+            color=azul,
+            font_size=48,
+        )
+        etiqueta_yz.move_to(RIGHT * 1.7 + UP * 1.35)
+        grafica_yz = VGroup(axes_yz, axes_yz_labels, parabola_yz, punto_yz, tangente_yz, etiqueta_yz)
 
         axes_xz = Axes(
             x_range=[-1.35, 1.35, 0.5],
@@ -169,9 +176,75 @@ class gradiente(ThreeDScene):
             stroke_width=5,
         )
         tangente_xz.set_fill(opacity=0)
+        etiqueta_xz = MathTex(
+            r"\frac{\partial z}{\partial x}",
+            color=azul,
+            font_size=48,
+        )
+        etiqueta_xz.move_to(RIGHT * 1.7 + DOWN * 1.45)
 
-        grafica = VGroup(axes, axes_labels, paraboloide, punto, curva_nivel, curva_nivel_xz)
-        grafica.scale(0.95)
+        escala_gradiente = 0.18
+        vector_gradiente = Arrow3D(
+            start=axes.c2p(x_punto, y_punto, z_punto),
+            end=axes.c2p(
+                x_punto + escala_gradiente * pendiente_xz,
+                y_punto + escala_gradiente * pendiente_yz,
+                z_punto,
+            ),
+            color=naranja,
+            thickness=0.025,
+            height=0.18,
+            base_radius=0.06,
+        )
+
+        axes_xy = Axes(
+            x_range=[-1.35, 1.35, 0.5],
+            y_range=[-1.35, 1.35, 0.5],
+            x_length=5.0,
+            y_length=5.0,
+            axis_config={"color": WHITE, "include_numbers": False, "tip_width": 0.12, "tip_height": 0.12},
+            tips=True,
+        )
+        axes_xy.move_to(ORIGIN + DOWN * 0.25)
+        axes_xy_labels = axes_xy.get_axis_labels(
+            MathTex("x", color=WHITE, font_size=36),
+            MathTex("y", color=WHITE, font_size=36),
+        )
+        curva_xy = ParametricFunction(
+            lambda theta: axes_xy.c2p(
+                radio_curva_nivel * np.cos(theta),
+                radio_curva_nivel * np.sin(theta),
+            ),
+            t_range=[0, TAU],
+            color=azul,
+            stroke_width=6,
+        )
+        punto_xy = Dot(
+            axes_xy.c2p(x_punto, y_punto),
+            radius=0.08,
+            color=YELLOW,
+        )
+        escala_vector_xy = 0.18
+        vector_xy = Arrow(
+            axes_xy.c2p(x_punto, y_punto),
+            axes_xy.c2p(
+                x_punto + escala_vector_xy * pendiente_xz,
+                y_punto + escala_vector_xy * pendiente_yz,
+            ),
+            buff=0,
+            color=naranja,
+            stroke_width=6,
+            max_tip_length_to_length_ratio=0.22,
+        )
+        etiqueta_vector_xy = MathTex(
+            r"\vec{v}=\left(\frac{\partial z}{\partial x},\frac{\partial z}{\partial y}\right)",
+            color=naranja,
+            font_size=42,
+        )
+        etiqueta_vector_xy.to_edge(DOWN, buff=0.35)
+
+        grafica = VGroup(axes, axes_labels, paraboloide, punto, curva_nivel, curva_nivel_xz, vector_gradiente)
+        grafica.scale(1.425)
         grafica.move_to(LEFT * 3.0 + DOWN * 1.15)
 
         self.add_fixed_in_frame_mobjects(
@@ -180,22 +253,38 @@ class gradiente(ThreeDScene):
             parabola_yz,
             punto_yz,
             tangente_yz,
+            etiqueta_yz,
             axes_xz,
             axes_xz_labels,
             parabola_xz,
             punto_xz,
             tangente_xz,
+            etiqueta_xz,
+            axes_xy,
+            axes_xy_labels,
+            curva_xy,
+            punto_xy,
+            vector_xy,
+            etiqueta_vector_xy,
         )
         axes_yz.set_opacity(0)
         axes_yz_labels.set_opacity(0)
         parabola_yz.set_stroke(opacity=0)
         punto_yz.set_opacity(0)
         tangente_yz.set_stroke(opacity=0)
+        etiqueta_yz.set_opacity(0)
         axes_xz.set_opacity(0)
         axes_xz_labels.set_opacity(0)
         parabola_xz.set_stroke(opacity=0)
         punto_xz.set_opacity(0)
         tangente_xz.set_stroke(opacity=0)
+        etiqueta_xz.set_opacity(0)
+        axes_xy.set_opacity(0)
+        axes_xy_labels.set_opacity(0)
+        curva_xy.set_stroke(opacity=0)
+        punto_xy.set_opacity(0)
+        vector_xy.set_opacity(0)
+        etiqueta_vector_xy.set_opacity(0)
 
         self.set_camera_orientation(phi=60 * DEGREES, theta=-45 * DEGREES, zoom=0.8)
         self.play(Write(titulo))
@@ -227,7 +316,45 @@ class gradiente(ThreeDScene):
             tangente_xz.animate.set_stroke(opacity=1),
             run_time=2,
         )
+        self.play(
+            etiqueta_yz.animate.set_opacity(1),
+            etiqueta_xz.animate.set_opacity(1),
+            run_time=1.5,
+        )
+        self.play(Create(vector_gradiente), run_time=2)
+        self.wait(2)
+        self.play(
+            FadeOut(grafica),
+            axes_yz.animate.set_opacity(0),
+            axes_yz_labels.animate.set_opacity(0),
+            parabola_yz.animate.set_stroke(opacity=0),
+            punto_yz.animate.set_opacity(0),
+            tangente_yz.animate.set_stroke(opacity=0),
+            etiqueta_yz.animate.set_opacity(0),
+            axes_xz.animate.set_opacity(0),
+            axes_xz_labels.animate.set_opacity(0),
+            parabola_xz.animate.set_stroke(opacity=0),
+            punto_xz.animate.set_opacity(0),
+            tangente_xz.animate.set_stroke(opacity=0),
+            etiqueta_xz.animate.set_opacity(0),
+            run_time=2,
+        )
+        self.play(
+            axes_xy.animate.set_opacity(1),
+            axes_xy_labels.animate.set_opacity(1),
+            curva_xy.animate.set_stroke(opacity=1),
+            punto_xy.animate.set_opacity(1),
+            vector_xy.animate.set_opacity(1),
+            etiqueta_vector_xy.animate.set_opacity(1),
+            run_time=2,
+        )
         self.wait(5)
+
+
+
+
+
+
 
 
 

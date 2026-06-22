@@ -237,11 +237,23 @@ class gradiente(ThreeDScene):
             max_tip_length_to_length_ratio=0.22,
         )
         etiqueta_vector_xy = MathTex(
-            r"\vec{v}=\left(\frac{\partial z}{\partial x},\frac{\partial z}{\partial y}\right)",
+            r"\left(\frac{\partial z}{\partial x},\frac{\partial z}{\partial y}\right)",
             color=naranja,
             font_size=42,
         )
         etiqueta_vector_xy.to_edge(DOWN, buff=0.35)
+        nombre_gradiente_xy = MathTex(
+            r"\nabla z",
+            color=naranja,
+            font_size=36,
+        )
+        nombre_gradiente_xy.next_to(punto_xy, UR, buff=0.12)
+        etiqueta_curva_xy = MathTex(
+            r"z=\frac{3}{4}",
+            color=azul,
+            font_size=38,
+        )
+        etiqueta_curva_xy.next_to(curva_xy, LEFT, buff=0.25)
 
         grafica = VGroup(axes, axes_labels, paraboloide, punto, curva_nivel, curva_nivel_xz, vector_gradiente)
         grafica.scale(1.425)
@@ -266,6 +278,8 @@ class gradiente(ThreeDScene):
             punto_xy,
             vector_xy,
             etiqueta_vector_xy,
+            nombre_gradiente_xy,
+            etiqueta_curva_xy,
         )
         axes_yz.set_opacity(0)
         axes_yz_labels.set_opacity(0)
@@ -285,6 +299,8 @@ class gradiente(ThreeDScene):
         punto_xy.set_opacity(0)
         vector_xy.set_opacity(0)
         etiqueta_vector_xy.set_opacity(0)
+        nombre_gradiente_xy.set_opacity(0)
+        etiqueta_curva_xy.set_opacity(0)
 
         self.set_camera_orientation(phi=60 * DEGREES, theta=-45 * DEGREES, zoom=0.8)
         self.play(Write(titulo))
@@ -346,9 +362,13 @@ class gradiente(ThreeDScene):
             punto_xy.animate.set_opacity(1),
             vector_xy.animate.set_opacity(1),
             etiqueta_vector_xy.animate.set_opacity(1),
+            nombre_gradiente_xy.animate.set_opacity(1),
+            etiqueta_curva_xy.animate.set_opacity(1),
             run_time=2,
         )
         self.wait(5)
+
+
 
 
 
